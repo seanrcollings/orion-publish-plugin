@@ -1,33 +1,40 @@
 import { TFile } from "obsidian";
 import { HTTP } from "./http";
-import { PublishedFileManager } from "./fileManager";
+import { PublishCache } from "./cache";
+import { OrionFileManager } from "./file";
 
-interface PublishServiceConfig {
+interface OrioinClientConfig {
 	baseUrl: string;
 	feedId: string;
+	feedName: string;
+	cache: PublishCache;
+	fileManager: OrionFileManager;
 }
 
-class PublishError extends Error {}
+class OrionClientError extends Error {}
 
-export class PublishService {
-	private fileManager: PublishedFileManager;
+export class OrionClient {
+	private cache: PublishCache;
+	private fileManager: OrionFileManager;
 	private baseUrl: string;
 	private feedId: string;
+	private feedName: string;
 
-	constructor(
-		fileManager: PublishedFileManager,
-		config: PublishServiceConfig
-	) {
-		this.fileManager = fileManager;
+	constructor(config: OrioinClientConfig) {
+		this.cache = config.cache;
+		this.fileManager = config.fileManager;
 		this.baseUrl = config.baseUrl;
 		this.feedId = config.feedId;
+		this.feedName = config.feedName;
 	}
 
 	async createPost(file: TFile) {
-		const { id } = this.fileManager.getPublishedFile(file);
+		const { id } = this.cache.getPublishedFile(file);
 
 		if (id) {
-			throw new PublishError(`File ${file.path} is already published`);
+			throw new OrionClientError(
+				`File ${file.path} is already published`
+			);
 		}
 
 		const contents = await this.fileManager.getFileContents(file);
@@ -35,6 +42,7 @@ export class PublishService {
 		const payload = {
 			title: file.basename,
 			content: contents,
+			feedTitle: this.feedName,
 		};
 
 		const { post } = await HTTP.post(
@@ -42,17 +50,17 @@ export class PublishService {
 			payload
 		);
 
-		this.fileManager.savePublishedFile(file, post.id, post.token);
+		this.cache.savePublishedFile(file, post.id, post.token);
 
 		return post;
 	}
 
 	async updatePost(file: TFile) {
 		const contents = await this.fileManager.getFileContents(file);
-		const { id, token } = this.fileManager.getPublishedFile(file);
+		const { id, token } = this.cache.getPublishedFile(file);
 
 		if (!id) {
-			throw new PublishError(`File ${file.path} is not published`);
+			throw new OrionClientError(`File ${file.path} is not published`);
 		}
 
 		const payload = {
@@ -68,21 +76,21 @@ export class PublishService {
 	}
 
 	async deletePost(file: TFile) {
-		const { id, token } = this.fileManager.getPublishedFile(file);
+		const { id, token } = this.cache.getPublishedFile(file);
 
 		if (!id) {
-			throw new PublishError(`File ${file.path} is not published`);
+			throw new OrionClientError(`File ${file.path} is not published`);
 		}
 
 		await HTTP.delete(`${this.baseUrl}/api/feeds/${this.feedId}/${id}`, {
 			token,
 		});
 
-		this.fileManager.deletePublishedFile(file);
+		this.cache.deletePublishedFile(file);
 	}
 
 	async getPostUrl(file: TFile) {
-		const { id } = this.fileManager.getPublishedFile(file);
+		const { id } = this.cache.getPublishedFile(file);
 
 		if (!id) {
 			return null;

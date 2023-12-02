@@ -2,17 +2,19 @@ import { TFile } from "obsidian";
 import { PublishedFileData, PublishedFilesRecord } from "./types";
 import OrionPublish from "./main";
 
-export class PublishedFileManager {
+export interface PublishCache {
+	getPublishedFile(file: TFile): Partial<PublishedFileData>;
+	savePublishedFile(file: TFile, id: string, token: string): void;
+	deletePublishedFile(file: TFile): void;
+}
+
+export class FileCache implements PublishCache {
 	private plugin: OrionPublish;
 	private publishedFiles: PublishedFilesRecord;
 
 	constructor(plugin: OrionPublish, publishedFiles: PublishedFilesRecord) {
 		this.plugin = plugin;
 		this.publishedFiles = publishedFiles;
-	}
-
-	async getFileContents(file: TFile) {
-		return this.plugin.app.vault.cachedRead(file);
 	}
 
 	savePublishedFile(file: TFile, id: string, token: string) {
