@@ -1,23 +1,12 @@
-import { randomBytes } from "crypto";
 import { Notice, Plugin, TFile } from "obsidian";
-import { SettingsTab } from "./settingsTab";
-import { OrionPublishConfig } from "./types";
+import { SettingsTab } from "./ui/settingsTab";
 import { OrionClient } from "./orionClient";
-import { FileCache } from "./cache";
+import { DataFileDB, OrionDB } from "./db";
 import { ObsidianNoteProcessor } from "./file";
 
-const DEFAULT_CONFIG: Partial<OrionPublishConfig> = {
-	settings: {
-		url: "http://localhost:3000",
-		feedName: "My Feed",
-	},
-	feedId: randomBytes(32).toString("base64").replace("=", ""),
-	publishedFiles: {},
-};
-
 export default class OrionPublish extends Plugin {
-	config: OrionPublishConfig;
-	private publishClient: OrionClient;
+	client: OrionClient;
+	db: OrionDB;
 
 	async onload() {
 		try {
@@ -30,20 +19,17 @@ export default class OrionPublish extends Plugin {
 	}
 
 	private async init() {
-		await this.loadConfig();
+		this.db = new DataFileDB(this);
+		await this.db.load();
+
 		this.addSettingTab(new SettingsTab(this.app, this));
 
-		// TODO Add a status bar tiem that shows the current note's publish URL
-		const cache = new FileCache(this, this.config.publishedFiles);
-
-		const fileManager = new ObsidianNoteProcessor(this.app);
+		// TODO Add a status bar item that shows the current note's publish URL
 		// TODO: this needs to be updated when the settings change
-		this.publishClient = new OrionClient({
-			cache,
-			fileManager,
-			baseUrl: this.config.settings.url,
-			feedId: this.config.feedId,
-			feedName: this.config.settings.feedName,
+
+		this.client = new OrionClient({
+			fileManager: new ObsidianNoteProcessor(this.app),
+			db: this.db,
 		});
 	}
 
@@ -55,7 +41,7 @@ export default class OrionPublish extends Plugin {
 				const { file } = view;
 				if (!file) return;
 
-				this.publishClient
+				this.client
 					.createPost(file)
 					.then(() => this.copyUrlToClipboard(file))
 					.catch((e) => new Notice(e.message));
@@ -69,7 +55,7 @@ export default class OrionPublish extends Plugin {
 				const { file } = view;
 				if (!file) return;
 
-				this.publishClient
+				this.client
 					.updatePost(file)
 					.then(() => this.copyUrlToClipboard(file))
 					.catch((e) => new Notice(e.message));
@@ -83,7 +69,7 @@ export default class OrionPublish extends Plugin {
 				const { file } = view;
 				if (!file) return;
 
-				this.publishClient
+				this.client
 					.deletePost(file)
 					.catch((e) => new Notice(e.message));
 			},
@@ -100,21 +86,14 @@ export default class OrionPublish extends Plugin {
 	}
 
 	private async copyUrlToClipboard(file: TFile) {
-		const url = await this.publishClient.getPostUrl(file);
+		const publishedFile = this.db.getPublishedFile(file);
 
-		if (!url) {
+		if (!publishedFile) {
 			new Notice("Note is not published");
 			return;
 		}
 
+		const url = `${this.db.settings.url}/${publishedFile.id}`;
 		navigator.clipboard.writeText(url);
-	}
-
-	private async loadConfig() {
-		this.config = Object.assign({}, DEFAULT_CONFIG, await this.loadData());
-	}
-
-	async saveConfig() {
-		await this.saveData(this.config);
 	}
 }

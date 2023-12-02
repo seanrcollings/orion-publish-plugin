@@ -1,37 +1,34 @@
 import { TFile } from "obsidian";
 import { HTTP } from "./http";
-import { PublishCache } from "./cache";
+import { OrionDB } from "./db";
 import { OrionFileManager } from "./file";
+import { Feed } from "./types";
 
 interface OrioinClientConfig {
-	baseUrl: string;
-	feedId: string;
-	feedName: string;
-	cache: PublishCache;
+	db: OrionDB;
 	fileManager: OrionFileManager;
 }
 
 class OrionClientError extends Error {}
 
+/** Connects to external API to plubish notes */
 export class OrionClient {
-	private cache: PublishCache;
+	private db: OrionDB;
 	private fileManager: OrionFileManager;
-	private baseUrl: string;
-	private feedId: string;
-	private feedName: string;
 
 	constructor(config: OrioinClientConfig) {
-		this.cache = config.cache;
+		this.db = config.db;
 		this.fileManager = config.fileManager;
-		this.baseUrl = config.baseUrl;
-		this.feedId = config.feedId;
-		this.feedName = config.feedName;
+	}
+
+	private get baseUrl() {
+		return this.db.settings.url;
 	}
 
 	async createPost(file: TFile) {
-		const { id } = this.cache.getPublishedFile(file);
+		const publishedFile = this.db.getPublishedFile(file);
 
-		if (id) {
+		if (publishedFile) {
 			throw new OrionClientError(
 				`File ${file.path} is already published`
 			);
@@ -42,26 +39,24 @@ export class OrionClient {
 		const payload = {
 			title: file.basename,
 			content: contents,
-			feedTitle: this.feedName,
 		};
 
-		const { post } = await HTTP.post(
-			`${this.baseUrl}/api/feeds/${this.feedId}`,
-			payload
-		);
+		const { post } = await HTTP.post(`${this.baseUrl}/api/posts`, payload);
 
-		this.cache.savePublishedFile(file, post.id, post.token);
+		this.db.addPublishedFile(file, post.id, post.token);
 
 		return post;
 	}
 
 	async updatePost(file: TFile) {
-		const contents = await this.fileManager.getFileContents(file);
-		const { id, token } = this.cache.getPublishedFile(file);
+		const publishedFile = this.db.getPublishedFile(file);
 
-		if (!id) {
+		if (!publishedFile) {
 			throw new OrionClientError(`File ${file.path} is not published`);
 		}
+
+		const { id, token } = publishedFile;
+		const contents = await this.fileManager.getFileContents(file);
 
 		const payload = {
 			title: file.basename,
@@ -69,33 +64,46 @@ export class OrionClient {
 			token,
 		};
 
-		return HTTP.put(
-			`${this.baseUrl}/api/feeds/${this.feedId}/${id}`,
-			payload
-		);
+		return HTTP.put(`${this.baseUrl}/api/posts/${id}`, payload);
 	}
 
 	async deletePost(file: TFile) {
-		const { id, token } = this.cache.getPublishedFile(file);
+		const publishedFile = this.db.getPublishedFile(file);
 
-		if (!id) {
+		if (!publishedFile) {
 			throw new OrionClientError(`File ${file.path} is not published`);
 		}
 
-		await HTTP.delete(`${this.baseUrl}/api/feeds/${this.feedId}/${id}`, {
+		const { id, token } = publishedFile;
+
+		await HTTP.delete(`${this.baseUrl}/api/posts/${id}`, {
 			token,
 		});
 
-		this.cache.deletePublishedFile(file);
+		await this.db.deletePublishedFile(file);
 	}
 
-	async getPostUrl(file: TFile) {
-		const { id } = this.cache.getPublishedFile(file);
+	async createFeed(title: string): Promise<Feed> {
+		const payload = {
+			title: title,
+		};
 
-		if (!id) {
-			return null;
+		const { feed } = await HTTP.post(`${this.baseUrl}/api/feeds`, payload);
+
+		await this.db.addFeed(feed);
+
+		return feed;
+	}
+
+	async deleteFeed(id: string) {
+		const feed = this.db.getFeed(id);
+		if (!feed) {
+			throw new OrionClientError(`Feed ${id} does not exist`);
 		}
 
-		return `${this.baseUrl}/${id}`;
+		await HTTP.delete(`${this.baseUrl}/api/feeds/${id}`, {
+			token: feed.token,
+		});
+		await this.db.deleteFeed(id);
 	}
 }

@@ -24,7 +24,7 @@ export class HTTP {
 		return await HTTP.request("PUT", url, body);
 	}
 
-	static async delete(url: string, body: any) {
+	static async delete(url: string, body?: any) {
 		return await HTTP.request("DELETE", url, body);
 	}
 }

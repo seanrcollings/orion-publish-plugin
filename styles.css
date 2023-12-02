@@ -1,0 +1,13 @@
+.orion-publish-feeds__new {
+	display: flex;
+	gap: 5px;
+	margin-bottom: 15px;
+}
+
+.orion-publish-feeds__new > button {
+	background-color: var(--interactive-accent);
+}
+
+.orion-publish-feeds__new > button:hover {
+	background-color: var(--interactive-accent-hover);
+}
