@@ -92,7 +92,6 @@ export class SettingsTab extends PluginSettingTab {
 			});
 
 		feeds.forEach((feed) => {
-			console.log(feed);
 			this.addFeedToList(feedsContainer, feed.id, feed.title);
 		});
 	}

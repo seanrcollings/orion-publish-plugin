@@ -3,6 +3,7 @@ import { SettingsTab } from "./ui/settingsTab";
 import { OrionClient } from "./orionClient";
 import { DataFileDB, OrionDB } from "./db";
 import { ObsidianNoteProcessor } from "./file";
+import { SelectFeedModal } from "./ui/feedsModal";
 
 export default class OrionPublish extends Plugin {
 	client: OrionClient;
@@ -25,8 +26,6 @@ export default class OrionPublish extends Plugin {
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		// TODO Add a status bar item that shows the current note's publish URL
-		// TODO: this needs to be updated when the settings change
-
 		this.client = new OrionClient({
 			fileManager: new ObsidianNoteProcessor(this.app),
 			db: this.db,
@@ -41,10 +40,29 @@ export default class OrionPublish extends Plugin {
 				const { file } = view;
 				if (!file) return;
 
-				this.client
-					.createPost(file)
-					.then(() => this.copyUrlToClipboard(file))
-					.catch((e) => new Notice(e.message));
+				const publishedFile = this.db.getPublishedFile(file);
+
+				if (publishedFile) {
+					new Notice("Note is already published");
+					return;
+				}
+
+				if (
+					this.db.settings.feedsEnabled &&
+					this.db.settings.feeds.length > 0
+				) {
+					const modal = new SelectFeedModal(
+						this.app,
+						this.db.settings.feeds,
+						async (feed) => {
+							await this.createOrUpdatePost(file, feed?.id);
+						}
+					);
+
+					modal.open();
+				} else {
+					await this.createOrUpdatePost(file);
+				}
 			},
 		});
 
@@ -54,35 +72,55 @@ export default class OrionPublish extends Plugin {
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (!file) return;
-
-				this.client
-					.updatePost(file)
-					.then(() => this.copyUrlToClipboard(file))
-					.catch((e) => new Notice(e.message));
+				await this.createOrUpdatePost(file);
 			},
 		});
 
 		this.addCommand({
 			id: "orion-publish.delete",
-			name: "Delete Published Note",
+			name: "Un-publish Note",
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (!file) return;
 
-				this.client
-					.deletePost(file)
-					.catch((e) => new Notice(e.message));
+				try {
+					await this.client.deletePost(file);
+					new Notice("Note unpublished");
+				} catch (e) {
+					new Notice(e.message);
+				}
 			},
 		});
 
 		this.addCommand({
 			id: "orion-publish.get-url",
-			name: "Get Published Note URL",
+			name: "Copy Published Note URL",
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (file) this.copyUrlToClipboard(file);
 			},
 		});
+	}
+
+	private async createOrUpdatePost(
+		file: TFile,
+		feedId: string | null = null
+	) {
+		const publishedFile = this.db.getPublishedFile(file);
+
+		try {
+			if (publishedFile) {
+				await this.client.updatePost(file);
+				new Notice("Note updated");
+			} else {
+				await this.client.createPost(file, feedId);
+				new Notice("Note published");
+			}
+
+			this.copyUrlToClipboard(file);
+		} catch (e) {
+			new Notice(e.message);
+		}
 	}
 
 	private async copyUrlToClipboard(file: TFile) {
