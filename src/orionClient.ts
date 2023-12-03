@@ -49,7 +49,7 @@ export class OrionClient {
 		return post;
 	}
 
-	async updatePost(file: TFile) {
+	async updatePost(file: TFile, feedId: string | null = null) {
 		const publishedFile = this.db.getPublishedFile(file);
 
 		if (!publishedFile) {
@@ -62,6 +62,7 @@ export class OrionClient {
 		const payload = {
 			title: file.basename,
 			content: contents,
+			feedId: feedId,
 			token,
 		};
 
