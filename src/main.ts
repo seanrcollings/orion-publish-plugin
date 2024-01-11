@@ -131,7 +131,7 @@ export default class OrionPublish extends Plugin {
 			return;
 		}
 
-		const url = `${this.db.settings.url}/${publishedFile.id}`;
+		const url = `${this.db.settings.url}/p/${publishedFile.id}`;
 		navigator.clipboard.writeText(url);
 	}
 }
