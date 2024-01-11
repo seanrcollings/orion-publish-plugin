@@ -4,7 +4,7 @@ import OrionPublish from "./main";
 
 const DEFAULT_CONFIG: Partial<OrionPublishConfig> = {
 	settings: {
-		url: "http://localhost:3000",
+		url: "https://orion.seancollings.dev",
 		feedsEnabled: false,
 		feeds: [],
 	},

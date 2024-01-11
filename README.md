@@ -17,13 +17,14 @@ All of Orion's functionality is available in the command palette.
 
 ### Settings
 
+![Orion Settings](./images/settings.png)
+
 ### Custom Domain
 You can point the plugin to a custom domain in the settings menu. This will change the URL that your notes are published to.
 
 #### Feeds
 Orion Publish supports feeds to collect multiple notes into a single group. You can create a feed in the settings menu.
 
-![Orion Feeds](./images/feeds.png)
 
 After you create a feed, each time you publish a note you can select which feed to add it to. You also have the option to publish a note without adding it to a feed.
 
