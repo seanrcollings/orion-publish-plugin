@@ -4,6 +4,7 @@ import { OrionClient } from "./orionClient";
 import { DataFileDB, OrionDB } from "./db";
 import { ObsidianNoteProcessor } from "./file";
 import { SelectFeedModal } from "./ui/feedsModal";
+import { Feed } from "./types";
 
 export default class OrionPublish extends Plugin {
 	client: OrionClient;
@@ -55,7 +56,7 @@ export default class OrionPublish extends Plugin {
 						this.app,
 						this.db.settings.feeds,
 						async (feed) => {
-							await this.createOrUpdatePost(file, feed?.id);
+							await this.createOrUpdatePost(file, feed);
 						}
 					);
 
@@ -102,10 +103,7 @@ export default class OrionPublish extends Plugin {
 		});
 	}
 
-	private async createOrUpdatePost(
-		file: TFile,
-		feedId: string | null = null
-	) {
+	private async createOrUpdatePost(file: TFile, feed: Feed | null = null) {
 		const publishedFile = this.db.getPublishedFile(file);
 
 		try {
@@ -113,7 +111,7 @@ export default class OrionPublish extends Plugin {
 				await this.client.updatePost(file);
 				new Notice("Note updated");
 			} else {
-				await this.client.createPost(file, feedId);
+				await this.client.createPost(file, feed);
 				new Notice("Note published");
 			}
 

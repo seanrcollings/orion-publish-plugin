@@ -25,7 +25,7 @@ export class OrionClient {
 		return this.db.settings.url;
 	}
 
-	async createPost(file: TFile, feedId: string | null = null) {
+	async createPost(file: TFile, feed: Feed | null = null) {
 		const publishedFile = this.db.getPublishedFile(file);
 
 		if (publishedFile) {
@@ -39,7 +39,8 @@ export class OrionClient {
 		const payload = {
 			title: file.basename,
 			content: contents,
-			feedId: feedId,
+			feedId: feed?.id,
+			feedToken: feed?.token,
 		};
 
 		const { post } = await HTTP.post(`${this.baseUrl}/api/posts`, payload);
