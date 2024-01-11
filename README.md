@@ -8,7 +8,7 @@ The site is hosted at [orion.seancollings.dev](https://orion.seancollings.dev). 
 ## Instructions
 All of Orion's functionality is available in the command palette.
 
-!(Orion Commands)[./images/commands.png]
+![Orion Commands](./images/commands.png)
 
 - `Orion Publish: Publish Note` - Publishes the current note to the web.
 - `Orion Publish: Update Published Note` - Updates the current note on the web.
@@ -23,7 +23,7 @@ You can point the plugin to a custom domain in the settings menu. This will chan
 #### Feeds
 Orion Publish supports feeds to collect multiple notes into a single group. You can create a feed in the settings menu.
 
-!(Orion Feeds)[./images/feeds.png]
+![Orion Feeds](./images/feeds.png)
 
 After you create a feed, each time you publish a note you can select which feed to add it to. You also have the option to publish a note without adding it to a feed.
 
