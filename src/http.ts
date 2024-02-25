@@ -1,15 +1,23 @@
+import { requestUrl } from "obsidian";
+
 export class HTTP {
 	static async request(method: string, url: string, body?: any) {
-		const response = await fetch(url, {
+		console.log(body);
+		const response = await requestUrl({
+			url,
 			method,
 			body: JSON.stringify(body),
+			throw: false,
+			contentType: "application/json",
 		});
 
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		if (response.status >= 400) {
+			const msg = `Failed to ${method} ${url}: ${response.status}`;
+			console.error(`${msg} - ${response.text}`);
+			throw new Error(msg);
 		}
 
-		return await response.json();
+		return response.json;
 	}
 
 	static async get(url: string) {

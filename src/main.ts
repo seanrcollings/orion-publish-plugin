@@ -35,8 +35,8 @@ export default class OrionPublish extends Plugin {
 
 	private async addCommands() {
 		this.addCommand({
-			id: "orion-publish.publish",
-			name: "Publish Note",
+			id: "publish",
+			name: "Publish note",
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (!file) return;
@@ -68,8 +68,8 @@ export default class OrionPublish extends Plugin {
 		});
 
 		this.addCommand({
-			id: "orion-publish.update",
-			name: "Update Published Note",
+			id: "update",
+			name: "Update published note",
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (!file) return;
@@ -78,8 +78,8 @@ export default class OrionPublish extends Plugin {
 		});
 
 		this.addCommand({
-			id: "orion-publish.delete",
-			name: "Un-publish Note",
+			id: "delete",
+			name: "Unpublish note",
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (!file) return;
@@ -94,8 +94,8 @@ export default class OrionPublish extends Plugin {
 		});
 
 		this.addCommand({
-			id: "orion-publish.get-url",
-			name: "Copy Published Note URL",
+			id: "get-url",
+			name: "Copy published note URL",
 			editorCallback: async (editor, view) => {
 				const { file } = view;
 				if (file) this.copyUrlToClipboard(file);
