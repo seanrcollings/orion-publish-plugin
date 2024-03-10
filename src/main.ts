@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, setIcon } from "obsidian";
 import { SettingsTab } from "./ui/settingsTab";
 import { OrionClient } from "./orionClient";
 import { DataFileDB, OrionDB } from "./db";
@@ -9,11 +9,13 @@ import { Feed } from "./types";
 export default class OrionPublish extends Plugin {
 	client: OrionClient;
 	db: OrionDB;
+	statusItem: HTMLElement | null = null;
 
 	async onload() {
 		try {
 			await this.init();
 			await this.addCommands();
+			await this.addEvents();
 		} catch (e) {
 			console.error(e);
 			new Notice(`Orion Publish failed to load: ${e}`);
@@ -101,6 +103,43 @@ export default class OrionPublish extends Plugin {
 				if (file) this.copyUrlToClipboard(file);
 			},
 		});
+	}
+
+	private async addEvents() {
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", (leaf) => {
+				this.statusItem?.remove();
+
+				if (!leaf || leaf.view.getViewType() !== "markdown") return;
+
+				const file = (leaf.view as MarkdownView).file;
+				if (!file) return;
+
+				const publishedFile = this.db.getPublishedFile(file);
+
+				if (!publishedFile) return;
+				this.statusItem = this.addStatusBarItem();
+				this.statusItem.classList.add(
+					"status-bar-item",
+					"plugin-editor-status",
+					"mod-clickable"
+				);
+				this.statusItem.ariaLabel = "Open published note";
+				this.statusItem.dataset["tooltipPosition"] = "top";
+				const button = this.statusItem.createEl("span", {
+					cls: "status-bar-item-icon",
+				});
+
+				button.addEventListener("click", () => {
+					this.copyUrlToClipboard(file);
+					window.open(
+						`${this.db.settings.url}/p/${publishedFile.id}`
+					);
+				});
+
+				setIcon(button, "upload");
+			})
+		);
 	}
 
 	private async createOrUpdatePost(file: TFile, feed: Feed | null = null) {
